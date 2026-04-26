@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>API Journey Runner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #0f172a; --panel: #1e293b; --muted: #94a3b8; --fg: #e2e8f0;
+      --pass: #22c55e; --fail: #ef4444; --error: #f59e0b; --accent: #38bdf8;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--fg); min-height: 100vh;
+    }
+    header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); }
+    header h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+    header p { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    main { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .field label {
+      display: block; font-size: 0.8rem; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 0.4rem; letter-spacing: 0.04em;
+    }
+    select, button {
+      width: 100%; padding: 0.6rem 0.8rem; font-size: 0.95rem; border-radius: 6px;
+      background: #0f172a; color: var(--fg); border: 1px solid var(--border);
+    }
+    select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .actions {
+      display: flex; gap: 0.75rem; margin-top: 1.25rem; align-items: center;
+    }
+    button {
+      width: auto; padding: 0.6rem 1.2rem; cursor: pointer; background: var(--accent);
+      color: #0f172a; font-weight: 600; border: none;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+    .summary {
+      display: flex; gap: 2rem; flex-wrap: wrap; padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border); margin-bottom: 1rem;
+    }
+    .summary div { font-size: 0.9rem; }
+    .summary span.label { color: var(--muted); font-size: 0.75rem;
+                           text-transform: uppercase; display: block; }
+    .badge {
+      display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em;
+    }
+    .badge.PASS  { background: rgba(34,197,94,0.15); color: var(--pass); }
+    .badge.FAIL  { background: rgba(239,68,68,0.15); color: var(--fail); }
+    .badge.ERROR { background: rgba(245,158,11,0.15); color: var(--error); }
+    .badge.SKIPPED { background: rgba(148,163,184,0.15); color: var(--muted); }
+    .step {
+      border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem; background: rgba(15,23,42,0.4);
+    }
+    .step header { padding: 0; border: none; display: flex; gap: 1rem;
+                   align-items: center; flex-wrap: wrap; }
+    .step header h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+    .step .meta { color: var(--muted); font-size: 0.8rem; }
+    .step pre {
+      background: #0a0f1c; border: 1px solid var(--border); border-radius: 4px;
+      padding: 0.6rem; max-height: 250px; overflow: auto; font-size: 0.78rem;
+      margin: 0.5rem 0 0;
+    }
+    details { margin-top: 0.5rem; }
+    details summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; }
+    .validations { margin-top: 0.5rem; }
+    .validation-line { font-size: 0.78rem; font-family: ui-monospace, monospace;
+                       padding: 0.1rem 0; }
+    .validation-line.PASS::before { content: "✓ "; color: var(--pass); }
+    .validation-line.FAIL::before { content: "✗ "; color: var(--fail); }
+    .empty { color: var(--muted); font-size: 0.9rem; padding: 2rem 0; text-align: center; }
+    .error-banner {
+      background: rgba(239,68,68,0.15); color: var(--fail); padding: 0.75rem 1rem;
+      border-radius: 6px; border: 1px solid rgba(239,68,68,0.3); margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>API Journey Runner</h1>
+    <p>Pick a product, module and scenario, then click Run. The framework calls every API mapped to the combination, in order.</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="grid">
+        <div class="field">
+          <label for="product">Loan Product (optional)</label>
+          <select id="product">
+            <option value="">— Legacy (no product) —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="module">LOS Module</label>
+          <select id="module" disabled></select>
+        </div>
+        <div class="field">
+          <label for="scenario">Test Scenario</label>
+          <select id="scenario" disabled></select>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="runBtn" disabled>Run Journey</button>
+        <button id="resetBtn" class="secondary" type="button">Reset</button>
+        <span id="status" style="color: var(--muted); font-size: 0.85rem;"></span>
+      </div>
+    </section>
+
+    <section id="resultPanel" class="panel" style="display: none;"></section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const productSel  = $('product');
+    const moduleSel   = $('module');
+    const scenarioSel = $('scenario');
+    const runBtn      = $('runBtn');
+    const resetBtn    = $('resetBtn');
+    const statusEl    = $('status');
+    const resultPanel = $('resultPanel');
+
+    async function fetchJson(url, opts) {
+      const res = await fetch(url, opts);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status} ${res.statusText}: ${text}`);
+      }
+      return res.json();
+    }
+
+    function fillSelect(sel, options, placeholder) {
+      sel.innerHTML = '';
+      const blank = document.createElement('option');
+      blank.value = '';
+      blank.textContent = placeholder;
+      sel.appendChild(blank);
+      for (const o of options) {
+        const el = document.createElement('option');
+        el.value = o.code;
+        el.textContent = `${o.code} — ${o.name}`;
+        sel.appendChild(el);
+      }
+      sel.disabled = options.length === 0;
+    }
+
+    async function loadProducts() {
+      try {
+        const products = await fetchJson('/journey/lookup/products');
+        for (const p of products) {
+          const el = document.createElement('option');
+          el.value = p.code;
+          el.textContent = `${p.code} — ${p.name}`;
+          productSel.appendChild(el);
+        }
+      } catch (e) {
+        showError('Failed to load products: ' + e.message);
+      }
+    }
+
+    async function loadModules() {
+      const product = productSel.value;
+      const url = product
+        ? `/journey/lookup/modules?productCode=${encodeURIComponent(product)}`
+        : '/journey/lookup/modules';
+      try {
+        const modules = await fetchJson(url);
+        fillSelect(moduleSel, modules, '— Select module —');
+      } catch (e) {
+        showError('Failed to load modules: ' + e.message);
+      }
+      fillSelect(scenarioSel, [], '— Pick a module first —');
+      updateRunBtn();
+    }
+
+    async function loadScenarios() {
+      const module = moduleSel.value;
+      if (!module) {
+        fillSelect(scenarioSel, [], '— Pick a module first —');
+        updateRunBtn();
+        return;
+      }
+      try {
+        const scenarios = await fetchJson(
+          `/journey/lookup/scenarios?moduleCode=${encodeURIComponent(module)}`);
+        fillSelect(scenarioSel, scenarios, '— Select scenario —');
+      } catch (e) {
+        showError('Failed to load scenarios: ' + e.message);
+      }
+      updateRunBtn();
+    }
+
+    function updateRunBtn() {
+      runBtn.disabled = !(moduleSel.value && scenarioSel.value);
+    }
+
+    function showError(msg) {
+      resultPanel.style.display = 'block';
+      resultPanel.innerHTML = `<div class="error-banner">${escapeHtml(msg)}</div>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    function tryPretty(text) {
+      if (!text) return '';
+      try { return JSON.stringify(JSON.parse(text), null, 2); }
+      catch { return text; }
+    }
+
+    async function runJourney() {
+      const product  = productSel.value;
+      const module   = moduleSel.value;
+      const scenario = scenarioSel.value;
+      const params = new URLSearchParams({ module, scenario });
+      if (product) params.append('product', product);
+
+      runBtn.disabled = true;
+      statusEl.textContent = 'Running…';
+      resultPanel.style.display = 'none';
+
+      const t0 = performance.now();
+      try {
+        const result = await fetchJson(`/journey/execute?${params}`, { method: 'POST' });
+        statusEl.textContent = `Done in ${Math.round(performance.now() - t0)} ms`;
+        renderResult(result);
+      } catch (e) {
+        statusEl.textContent = '';
+        showError(e.message);
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    function renderResult(r) {
+      resultPanel.style.display = 'block';
+      const stepsHtml = (r.steps || []).map(renderStep).join('') ||
+        '<div class="empty">No APIs were mapped for this combination.</div>';
+
+      resultPanel.innerHTML = `
+        <div class="summary">
+          <div><span class="label">Run ID</span>${escapeHtml(r.journeyRunId)}</div>
+          <div><span class="label">Product</span>${escapeHtml(r.loanProductCode || '—')}</div>
+          <div><span class="label">Module</span>${escapeHtml(r.moduleCode)}</div>
+          <div><span class="label">Scenario</span>${escapeHtml(r.scenarioCode)}</div>
+          <div><span class="label">Status</span><span class="badge ${r.status}">${r.status}</span></div>
+          <div><span class="label">Duration</span>${r.totalDurationMs} ms</div>
+          <div><span class="label">Steps</span>${(r.steps || []).length}</div>
+        </div>
+        ${stepsHtml}`;
+    }
+
+    function renderStep(s) {
+      const dbValids = (s.dbValidations || []).map(v =>
+        `<div class="validation-line ${v.passed ? 'PASS' : 'FAIL'}">DB ${escapeHtml(v.validationKey)}: expected=${escapeHtml(v.expectedValue ?? '')}, actual=${escapeHtml(v.actualValue ?? '')}</div>`).join('');
+      const csvValids = (s.csvValidations || []).map(v =>
+        `<div class="validation-line ${v.passed ? 'PASS' : 'FAIL'}">CSV ${escapeHtml(v.validationKey)}: expected=${escapeHtml(v.expectedValue ?? '')}, actual=${escapeHtml(v.actualValue ?? '')}</div>`).join('');
+      const valids = dbValids + csvValids;
+      return `
+        <div class="step">
+          <header>
+            <h3>${escapeHtml(s.apiName)}</h3>
+            <span class="badge ${s.status}">${s.status}</span>
+            <span class="meta">order #${s.executionOrder} · HTTP ${s.httpStatusCode ?? '—'} · ${s.executionTimeMs} ms</span>
+          </header>
+          ${s.errorMessage ? `<div class="error-banner" style="margin-top:0.5rem;">${escapeHtml(s.errorMessage)}</div>` : ''}
+          ${valids ? `<div class="validations">${valids}</div>` : ''}
+          ${s.requestPayload  ? `<details><summary>Request</summary><pre>${escapeHtml(tryPretty(s.requestPayload))}</pre></details>`  : ''}
+          ${s.responsePayload ? `<details><summary>Response</summary><pre>${escapeHtml(tryPretty(s.responsePayload))}</pre></details>` : ''}
+        </div>`;
+    }
+
+    productSel.addEventListener('change', loadModules);
+    moduleSel.addEventListener('change', loadScenarios);
+    scenarioSel.addEventListener('change', updateRunBtn);
+    runBtn.addEventListener('click', runJourney);
+    resetBtn.addEventListener('click', () => {
+      productSel.value = '';
+      loadModules();
+      resultPanel.style.display = 'none';
+      statusEl.textContent = '';
+    });
+
+    loadProducts().then(loadModules);
+  </script>
+</body>
+</html>
