@@ -27,6 +27,9 @@
       </state>
     </system>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="ProjectColorInfo"><![CDATA[{
   "associatedIndex": 0
 }]]></component>
@@ -40,6 +43,7 @@
     "Gradle.api-framework [:com.example.apiframework.ApiAutomationFrameworkApplication.main()].executor": "Debug",
     "Gradle.api-framework.executor": "Debug",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "D:/AI AUTOMATION/api-automation-framework"
   }
