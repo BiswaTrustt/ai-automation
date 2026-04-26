@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/api_automation_db_test
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    clean-on-validation-error: false
+
+logging:
+  level:
+    com.example.apiframework: DEBUG
