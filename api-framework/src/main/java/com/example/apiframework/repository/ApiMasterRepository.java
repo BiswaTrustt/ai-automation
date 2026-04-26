@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -24,6 +25,8 @@ public interface ApiMasterRepository extends JpaRepository<ApiMaster, Long> {
      * @return an {@link Optional} containing the entity if found and active
      */
     Optional<ApiMaster> findByApiNameAndActiveTrue(String apiName);
+
+    List<ApiMaster> findByModuleNameAndActiveTrue(String moduleName);
 
     /**
      * Eagerly loads the API with all its headers in one query.

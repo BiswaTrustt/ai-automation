@@ -1,0 +1,4 @@
+scenario_code,api_name,validation_key,expected_value
+VALID_CUSTOMER,saveQde,loan_status,APPROVED
+VALID_CUSTOMER,saveQde,$.json.customerType,NEW
+VALID_CUSTOMER,fetchEligibility,$.json.mobileNumber,9999999999
