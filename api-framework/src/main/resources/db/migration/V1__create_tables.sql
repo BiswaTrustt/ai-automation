@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS api_headers (
 );
 
 COMMENT ON TABLE  api_headers              IS 'HTTP headers to attach to every execution of the parent API';
-COMMENT ON COLUMN api_headers.is_dynamic   IS 'TRUE when header_value contains a ${PLACEHOLDER}';
+COMMENT ON COLUMN api_headers.is_dynamic   IS 'TRUE when header_value contains a runtime placeholder token';
 COMMENT ON COLUMN api_headers.sequence_no  IS 'Ordering hint (lower = applied first)';
 
 CREATE INDEX IF NOT EXISTS idx_api_headers_api_id ON api_headers(api_id);
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS api_request_templates (
 );
 
 COMMENT ON TABLE  api_request_templates                  IS 'JSON body templates; placeholders are resolved at runtime';
-COMMENT ON COLUMN api_request_templates.request_template IS 'JSONB template with ${PLACEHOLDER} tokens';
+COMMENT ON COLUMN api_request_templates.request_template IS 'JSONB template with runtime placeholder tokens';
 
 CREATE INDEX IF NOT EXISTS idx_api_templates_api_id ON api_request_templates(api_id);
 
