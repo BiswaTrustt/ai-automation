@@ -70,6 +70,13 @@ test {
     useTestNG() {
         suites file('src/test/resources/testng.xml')
     }
+    // Exclude legacy JUnit integration tests — they predate the journey framework
+    // and require a live Postgres + valid credentials. Run them manually via the
+    // IDE if needed, or migrate to TestNG.
+    exclude '**/ApiExecutionIntegrationTest.class'
+    exclude '**/PlaceholderResolverTest.class'
+    exclude '**/BaseIntegrationTest.class'
+
     testLogging {
         events 'passed', 'skipped', 'failed'
         showStandardStreams = true
