@@ -17,14 +17,22 @@ public class ModuleService {
     private final ApiMasterRepository apiRepo;
 
     /**
-     * Returns the ordered list of (mapping, api_master) pairs for a given
-     * module + scenario, restricted to APIs whose module_name == moduleCode.
-     * The module filter guards against the same scenario_code being reused
-     * across modules.
+     * Returns the ordered list of (mapping, api_master) pairs.
+     *
+     * <ul>
+     *   <li>If {@code productId} is null, picks legacy rows where product_id IS NULL
+     *       (backward-compatible 2-arg flow).</li>
+     *   <li>If {@code productId} is non-null, picks rows whose product_id matches
+     *       (3-arg product-aware flow).</li>
+     * </ul>
+     *
+     * The module filter (api_master.module_name == moduleCode) guards against
+     * scenarios shared across modules.
      */
-    public List<OrderedApi> orderedApisFor(String moduleCode, Long scenarioId) {
-        List<ApiScenarioMapping> mappings = mappingRepo
-                .findByScenarioIdAndActiveTrueOrderByExecutionOrderAsc(scenarioId);
+    public List<OrderedApi> orderedApisFor(String moduleCode, Long scenarioId, Long productId) {
+        List<ApiScenarioMapping> mappings = (productId == null)
+                ? mappingRepo.findActiveForScenarioNoProduct(scenarioId)
+                : mappingRepo.findActiveForScenarioAndProduct(scenarioId, productId);
 
         if (mappings.isEmpty()) return List.of();
 

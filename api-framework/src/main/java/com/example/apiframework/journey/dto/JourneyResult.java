@@ -11,6 +11,7 @@ import java.util.List;
 @Builder
 public class JourneyResult {
     String journeyRunId;
+    String loanProductCode;
     String moduleCode;
     String scenarioCode;
     JourneyStatus status;

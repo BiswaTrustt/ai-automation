@@ -22,11 +22,29 @@ public class QdeJourneyTest extends AbstractTestNGSpringContextTests {
 
     private JourneyResult lastResult;
 
-    @Test
+    @Test(description = "Legacy 2-arg flow: module + scenario")
     public void executeQdeValidCustomer() {
         lastResult = journeyExecutor.execute("QDE", "VALID_CUSTOMER");
         Assert.assertEquals(lastResult.getStatus(), JourneyStatus.PASS,
-                "QDE / VALID_CUSTOMER journey did not pass");
+                "QDE / VALID_CUSTOMER (no product) journey did not pass");
+    }
+
+    @Test(description = "Product-aware 3-arg flow: JLG + QDE + VALID_CUSTOMER")
+    public void executeJlgQdeValidCustomer() {
+        lastResult = journeyExecutor.execute("JLG", "QDE", "VALID_CUSTOMER");
+        Assert.assertEquals(lastResult.getLoanProductCode(), "JLG");
+        Assert.assertEquals(lastResult.getStatus(), JourneyStatus.PASS,
+                "JLG / QDE / VALID_CUSTOMER journey did not pass");
+    }
+
+    @Test(description = "Product-aware 3-arg flow: SHG runs a different sequence")
+    public void executeShgQdeValidCustomer() {
+        lastResult = journeyExecutor.execute("SHG", "QDE", "VALID_CUSTOMER");
+        Assert.assertEquals(lastResult.getLoanProductCode(), "SHG");
+        Assert.assertEquals(lastResult.getStatus(), JourneyStatus.PASS,
+                "SHG / QDE / VALID_CUSTOMER journey did not pass");
+        Assert.assertEquals(lastResult.getSteps().size(), 1,
+                "SHG sequence should be a single API per V6 seed");
     }
 
     @AfterMethod

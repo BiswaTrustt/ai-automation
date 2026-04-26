@@ -8,6 +8,7 @@ import com.example.apiframework.journey.dto.JourneyContext;
 import com.example.apiframework.journey.dto.JourneyResult;
 import com.example.apiframework.journey.dto.ValidationOutcome;
 import com.example.apiframework.journey.entity.JourneyExecutionHistory;
+import com.example.apiframework.journey.entity.LoanProductMaster;
 import com.example.apiframework.journey.entity.TestScenarioMaster;
 import com.example.apiframework.journey.enums.JourneyStatus;
 import com.example.apiframework.journey.repository.JourneyExecutionHistoryRepository;
@@ -25,6 +26,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class JourneyExecutionService {
 
+    private final ProductService productService;
     private final ScenarioService scenarioService;
     private final ModuleService moduleService;
     private final PreSqlExecutionService preSqlService;
@@ -36,31 +38,48 @@ public class JourneyExecutionService {
     private final JourneyExecutionHistoryRepository historyRepo;
     private final CsvResultWriter csvWriter;
 
+    /** Backward-compatible 2-arg entry point. */
     public JourneyResult execute(String moduleCode, String scenarioCode) {
-        log.info("=== Journey start | module={} scenario={} ===", moduleCode, scenarioCode);
+        return execute(null, moduleCode, scenarioCode);
+    }
+
+    /** Product-aware 3-arg entry point. */
+    public JourneyResult execute(String productCode, String moduleCode, String scenarioCode) {
+        log.info("=== Journey start | product={} module={} scenario={} ===",
+                productCode, moduleCode, scenarioCode);
         LocalDateTime startedAt = LocalDateTime.now();
 
-        TestScenarioMaster scenario = scenarioService.require(scenarioCode);
-        JourneyContext ctx = new JourneyContext(moduleCode, scenarioCode);
+        Long productId = null;
+        if (productCode != null && !productCode.isBlank()) {
+            LoanProductMaster product = productService.require(productCode);
+            productId = product.getId();
+            productService.requireProductModule(productId, productCode, moduleCode);
+        }
 
-        List<ModuleService.OrderedApi> apis = moduleService.orderedApisFor(moduleCode, scenario.getId());
+        TestScenarioMaster scenario = scenarioService.require(scenarioCode);
+        JourneyContext ctx = new JourneyContext(productCode, moduleCode, scenarioCode);
+
+        List<ModuleService.OrderedApi> apis =
+                moduleService.orderedApisFor(moduleCode, scenario.getId(), productId);
+
         if (apis.isEmpty()) {
-            log.warn("No APIs mapped for module={} scenario={}", moduleCode, scenarioCode);
+            log.warn("No APIs mapped for product={} module={} scenario={}",
+                    productCode, moduleCode, scenarioCode);
         }
 
         List<ApiStepResult> steps = new ArrayList<>();
         boolean anyFail = false;
-
         for (ModuleService.OrderedApi entry : apis) {
             ApiStepResult step = runStep(scenario.getId(), entry.api(), entry.executionOrder(), ctx);
             steps.add(step);
-            persistHistory(ctx, moduleCode, scenarioCode, step);
+            persistHistory(ctx, step);
             if (step.getStatus() != JourneyStatus.PASS) anyFail = true;
         }
 
         LocalDateTime finishedAt = LocalDateTime.now();
         JourneyResult result = JourneyResult.builder()
                 .journeyRunId(ctx.getJourneyRunId())
+                .loanProductCode(productCode)
                 .moduleCode(moduleCode)
                 .scenarioCode(scenarioCode)
                 .status(anyFail ? JourneyStatus.FAIL : JourneyStatus.PASS)
@@ -125,11 +144,12 @@ public class JourneyExecutionService {
         }
     }
 
-    private void persistHistory(JourneyContext ctx, String moduleCode, String scenarioCode, ApiStepResult s) {
+    private void persistHistory(JourneyContext ctx, ApiStepResult s) {
         historyRepo.save(JourneyExecutionHistory.builder()
                 .journeyRunId(ctx.getJourneyRunId())
-                .moduleCode(moduleCode)
-                .scenarioCode(scenarioCode)
+                .loanProductCode(ctx.getLoanProductCode())
+                .moduleCode(ctx.getModuleCode())
+                .scenarioCode(ctx.getScenarioCode())
                 .apiName(s.getApiName())
                 .executionOrder(s.getExecutionOrder())
                 .status(s.getStatus().name())

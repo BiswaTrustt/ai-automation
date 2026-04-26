@@ -27,6 +27,9 @@ public class JourneyExecutionHistory {
     @Column(name = "scenario_code", nullable = false, length = 100)
     private String scenarioCode;
 
+    @Column(name = "loan_product_code", length = 50)
+    private String loanProductCode;
+
     @Column(name = "api_name", nullable = false, length = 255)
     private String apiName;
 
