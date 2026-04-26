@@ -31,6 +31,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
+    placeholder-replacement: false
 
 server:
   port: 8080
