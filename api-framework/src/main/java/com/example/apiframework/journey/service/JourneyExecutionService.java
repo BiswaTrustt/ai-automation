@@ -70,10 +70,18 @@ public class JourneyExecutionService {
         List<ApiStepResult> steps = new ArrayList<>();
         boolean anyFail = false;
         for (ModuleService.OrderedApi entry : apis) {
-            ApiStepResult step = runStep(scenario.getId(), entry.api(), entry.executionOrder(), ctx);
-            steps.add(step);
-            persistHistory(ctx, step);
-            if (step.getStatus() != JourneyStatus.PASS) anyFail = true;
+            int loops = Math.max(1, entry.loopCount());
+            for (int i = 1; i <= loops; i++) {
+                ctx.setCurrentIteration(i);
+                if (entry.delayMs() > 0) {
+                    try { Thread.sleep(entry.delayMs()); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+                ApiStepResult step = runStep(scenario.getId(), entry, i, loops, ctx);
+                steps.add(step);
+                persistHistory(ctx, step);
+                if (step.getStatus() != JourneyStatus.PASS) anyFail = true;
+            }
         }
 
         LocalDateTime finishedAt = LocalDateTime.now();
@@ -90,12 +98,18 @@ public class JourneyExecutionService {
                 .build();
 
         csvWriter.write(result);
-        log.info("=== Journey done | runId={} status={} duration={}ms ===",
-                result.getJourneyRunId(), result.getStatus(), result.getTotalDurationMs());
+        log.info("=== Journey done | runId={} status={} duration={}ms steps={} ===",
+                result.getJourneyRunId(), result.getStatus(),
+                result.getTotalDurationMs(), steps.size());
         return result;
     }
 
-    private ApiStepResult runStep(Long scenarioId, ApiMaster api, int order, JourneyContext ctx) {
+    private ApiStepResult runStep(Long scenarioId,
+                                  ModuleService.OrderedApi entry,
+                                  int iteration,
+                                  int totalLoops,
+                                  JourneyContext ctx) {
+        ApiMaster api = entry.api();
         long t0 = System.currentTimeMillis();
         try {
             preSqlService.runPreSql(scenarioId, api.getApiId(), ctx);
@@ -104,6 +118,7 @@ public class JourneyExecutionService {
             GenericApiExecutor.ExecutionOutcome outcome = apiExecutor.execute(metadata, Map.of());
 
             responseMapping.capture(ctx, api.getApiName(), outcome.getResponseBody());
+            responseMapping.applyExtractions(ctx, outcome.getResponseBody(), entry.extractionMappings());
 
             List<ValidationOutcome> dbOutcomes = postValidation.validate(scenarioId, api.getApiId(), ctx);
             Map<String, String> dbValuesMap = new LinkedHashMap<>();
@@ -117,9 +132,13 @@ public class JourneyExecutionService {
             boolean csvOk = csvOutcomes.stream().allMatch(ValidationOutcome::isPassed);
             JourneyStatus status = (httpOk && dbOk && csvOk) ? JourneyStatus.PASS : JourneyStatus.FAIL;
 
+            String label = totalLoops > 1
+                    ? api.getApiName() + " [" + iteration + "/" + totalLoops + "]"
+                    : api.getApiName();
+
             return ApiStepResult.builder()
-                    .apiName(api.getApiName())
-                    .executionOrder(order)
+                    .apiName(label)
+                    .executionOrder(entry.executionOrder())
                     .status(status)
                     .httpStatusCode(outcome.getStatusCode())
                     .executionTimeMs(System.currentTimeMillis() - t0)
@@ -131,10 +150,10 @@ public class JourneyExecutionService {
                     .build();
 
         } catch (Exception ex) {
-            log.error("Step '{}' errored: {}", api.getApiName(), ex.getMessage(), ex);
+            log.error("Step '{}' iteration {} errored: {}", api.getApiName(), iteration, ex.getMessage(), ex);
             return ApiStepResult.builder()
                     .apiName(api.getApiName())
-                    .executionOrder(order)
+                    .executionOrder(entry.executionOrder())
                     .status(JourneyStatus.ERROR)
                     .executionTimeMs(System.currentTimeMillis() - t0)
                     .dbValidations(List.of())

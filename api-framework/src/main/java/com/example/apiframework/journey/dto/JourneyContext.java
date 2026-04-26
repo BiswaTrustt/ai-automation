@@ -1,6 +1,7 @@
 package com.example.apiframework.journey.dto;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -20,6 +21,10 @@ public class JourneyContext {
     private final Map<String, String> responsesByApi = new LinkedHashMap<>();
     private final Map<String, String> capturedValues = new LinkedHashMap<>();
 
+    /** 1-based iteration index for the current looped step (resolved by ${ITERATION}). */
+    @Setter
+    private int currentIteration = 1;
+
     public JourneyContext(String moduleCode, String scenarioCode) {
         this(null, moduleCode, scenarioCode);
     }
@@ -37,6 +42,6 @@ public class JourneyContext {
     }
 
     public void capture(String key, String value) {
-        capturedValues.put(key, value);
+        if (key != null) capturedValues.put(key, value == null ? "" : value);
     }
 }

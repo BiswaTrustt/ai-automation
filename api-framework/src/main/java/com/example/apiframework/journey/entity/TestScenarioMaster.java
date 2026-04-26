@@ -35,6 +35,11 @@ public class TestScenarioMaster {
     @Builder.Default
     private Boolean active = Boolean.TRUE;
 
+    /** TRUE for JMX-style flows that walk across many modules within one scenario. */
+    @Column(name = "cross_module", nullable = false)
+    @Builder.Default
+    private Boolean crossModule = Boolean.FALSE;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

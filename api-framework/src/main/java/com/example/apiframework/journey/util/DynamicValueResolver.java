@@ -71,6 +71,7 @@ public class DynamicValueResolver {
                 case "CSV"         -> resolveCsv(arg, ctx);
                 case "RESPONSE"    -> resolveResponse(arg, ctx);
                 case "CTX"         -> ctx.getCapturedValues().getOrDefault(arg, "");
+                case "ITERATION"   -> Integer.toString(ctx.getCurrentIteration());
                 default            -> "${" + token + "}";
             };
         } catch (Exception ex) {

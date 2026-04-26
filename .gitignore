@@ -19,5 +19,9 @@ Thumbs.db
 logs/
 *.log
 
+# Journey runtime outputs (CSV results emitted by CsvResultWriter)
+reports/
+api-framework/reports/
+
 # AiTDP
 .aitdp/
