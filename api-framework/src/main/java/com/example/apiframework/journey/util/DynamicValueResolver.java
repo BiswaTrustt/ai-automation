@@ -31,6 +31,8 @@ import java.util.regex.Pattern;
  *   ${DB:select ... }     — first column of first row from JdbcTemplate query
  *   ${CSV:file:col}       — first row's column from /expected/<file> on classpath
  *   ${RESPONSE:api.$.path} — JsonPath into a previously captured response body
+ *   ${MEMBERS}            — member count passed to /journey/execute (blank if unset)
+ *   ${ENVIRONMENT}        — env code passed to /journey/execute (blank if unset)
  *   anything else          — left as-is
  */
 @Slf4j
@@ -72,6 +74,8 @@ public class DynamicValueResolver {
                 case "RESPONSE"    -> resolveResponse(arg, ctx);
                 case "CTX"         -> ctx.getCapturedValues().getOrDefault(arg, "");
                 case "ITERATION"   -> Integer.toString(ctx.getCurrentIteration());
+                case "MEMBERS"     -> ctx.getMemberCount() == null ? "" : ctx.getMemberCount().toString();
+                case "ENVIRONMENT" -> ctx.getEnvCode() == null ? "" : ctx.getEnvCode();
                 default            -> "${" + token + "}";
             };
         } catch (Exception ex) {

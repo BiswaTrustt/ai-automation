@@ -1,8 +1,10 @@
 package com.example.apiframework.journey.controller;
 
+import com.example.apiframework.journey.entity.EnvironmentMaster;
 import com.example.apiframework.journey.entity.LoanProductMaster;
 import com.example.apiframework.journey.entity.ProductModuleMapping;
 import com.example.apiframework.journey.entity.TestScenarioMaster;
+import com.example.apiframework.journey.repository.EnvironmentMasterRepository;
 import com.example.apiframework.journey.repository.LoanProductMasterRepository;
 import com.example.apiframework.journey.repository.ProductModuleMappingRepository;
 import com.example.apiframework.journey.repository.TestScenarioMasterRepository;
@@ -23,6 +25,14 @@ public class JourneyLookupController {
     private final LoanProductMasterRepository productRepo;
     private final ProductModuleMappingRepository moduleRepo;
     private final TestScenarioMasterRepository scenarioRepo;
+    private final EnvironmentMasterRepository envRepo;
+
+    @GetMapping("/environments")
+    public List<Option> environments() {
+        return envRepo.findAllByActiveTrueOrderByEnvCodeAsc().stream()
+                .map(e -> new Option(e.getEnvCode(), e.getEnvName()))
+                .toList();
+    }
 
     @GetMapping("/products")
     public List<Option> products() {

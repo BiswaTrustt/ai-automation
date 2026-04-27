@@ -15,9 +15,11 @@ import java.util.UUID;
 public class JourneyContext {
 
     private final String journeyRunId = UUID.randomUUID().toString();
+    private final String envCode;
     private final String loanProductCode;
     private final String moduleCode;
     private final String scenarioCode;
+    private final Integer memberCount;
     private final Map<String, String> responsesByApi = new LinkedHashMap<>();
     private final Map<String, String> capturedValues = new LinkedHashMap<>();
 
@@ -26,12 +28,22 @@ public class JourneyContext {
     private int currentIteration = 1;
 
     public JourneyContext(String moduleCode, String scenarioCode) {
-        this(null, moduleCode, scenarioCode);
+        this(null, null, moduleCode, null, scenarioCode);
     }
 
     public JourneyContext(String loanProductCode, String moduleCode, String scenarioCode) {
+        this(null, loanProductCode, moduleCode, null, scenarioCode);
+    }
+
+    public JourneyContext(String envCode,
+                          String loanProductCode,
+                          String moduleCode,
+                          Integer memberCount,
+                          String scenarioCode) {
+        this.envCode = envCode;
         this.loanProductCode = loanProductCode;
         this.moduleCode = moduleCode;
+        this.memberCount = memberCount;
         this.scenarioCode = scenarioCode;
     }
 

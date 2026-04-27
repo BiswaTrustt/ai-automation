@@ -40,13 +40,26 @@ public class JourneyExecutionService {
 
     /** Backward-compatible 2-arg entry point. */
     public JourneyResult execute(String moduleCode, String scenarioCode) {
-        return execute(null, moduleCode, scenarioCode);
+        return execute(null, null, moduleCode, null, scenarioCode);
     }
 
     /** Product-aware 3-arg entry point. */
     public JourneyResult execute(String productCode, String moduleCode, String scenarioCode) {
-        log.info("=== Journey start | product={} module={} scenario={} ===",
-                productCode, moduleCode, scenarioCode);
+        return execute(null, productCode, moduleCode, null, scenarioCode);
+    }
+
+    /**
+     * Full entry point — env (selects environment_master.base_url at runtime),
+     * product (filters api_scenario_mapping rows), members (placeholder for
+     * {@code ${MEMBERS}} in templates).
+     */
+    public JourneyResult execute(String envCode,
+                                 String productCode,
+                                 String moduleCode,
+                                 Integer memberCount,
+                                 String scenarioCode) {
+        log.info("=== Journey start | env={} product={} module={} members={} scenario={} ===",
+                envCode, productCode, moduleCode, memberCount, scenarioCode);
         LocalDateTime startedAt = LocalDateTime.now();
 
         Long productId = null;
@@ -57,7 +70,7 @@ public class JourneyExecutionService {
         }
 
         TestScenarioMaster scenario = scenarioService.require(scenarioCode);
-        JourneyContext ctx = new JourneyContext(productCode, moduleCode, scenarioCode);
+        JourneyContext ctx = new JourneyContext(envCode, productCode, moduleCode, memberCount, scenarioCode);
 
         List<ModuleService.OrderedApi> apis =
                 moduleService.orderedApisFor(moduleCode, scenario.getId(), productId);

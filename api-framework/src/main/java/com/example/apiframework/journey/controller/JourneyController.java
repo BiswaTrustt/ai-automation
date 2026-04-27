@@ -15,16 +15,20 @@ public class JourneyController {
     /**
      * Trigger a journey.
      * <ul>
-     *   <li>{@code product} is optional — when omitted, runs the legacy 2-arg flow.</li>
-     *   <li>When supplied, runs the product-aware flow filtered by loan product.</li>
+     *   <li>{@code env} (optional) — environment code from environment_master (e.g. qa2). When set,
+     *       the run resolves base URLs from environment_master instead of api_master.base_url.</li>
+     *   <li>{@code product} (optional) — when omitted, runs the legacy flow (scenario rows where
+     *       product_id IS NULL).</li>
+     *   <li>{@code members} (optional) — exposed to templates as {@code ${MEMBERS}}; does not yet
+     *       multiply per-customer step loops.</li>
      * </ul>
      */
     @PostMapping("/execute")
-    public JourneyResult execute(@RequestParam(required = false) String product,
+    public JourneyResult execute(@RequestParam(required = false) String env,
+                                 @RequestParam(required = false) String product,
                                  @RequestParam String module,
+                                 @RequestParam(required = false) Integer members,
                                  @RequestParam String scenario) {
-        return (product == null || product.isBlank())
-                ? executor.execute(module, scenario)
-                : executor.execute(product, module, scenario);
+        return executor.execute(env, product, module, members, scenario);
     }
 }

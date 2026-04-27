@@ -24,6 +24,12 @@
       border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;
     }
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .grid.row2 { margin-top: 1rem; }
+    input[type="number"] {
+      width: 100%; padding: 0.6rem 0.8rem; font-size: 0.95rem; border-radius: 6px;
+      background: #0f172a; color: var(--fg); border: 1px solid var(--border);
+    }
+    input[type="number"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
     .field label {
       display: block; font-size: 0.8rem; text-transform: uppercase;
       color: var(--muted); margin-bottom: 0.4rem; letter-spacing: 0.04em;
@@ -87,12 +93,16 @@
 <body>
   <header>
     <h1>API Journey Runner</h1>
-    <p>Pick a product, module and scenario, then click Run. The framework calls every API mapped to the combination, in order.</p>
+    <p>Pick an environment, product, module and scenario, then click Run. The framework calls every API mapped to the combination, in order, against the selected environment's base URL.</p>
   </header>
 
   <main>
     <section class="panel">
       <div class="grid">
+        <div class="field">
+          <label for="environment">Environment</label>
+          <select id="environment"></select>
+        </div>
         <div class="field">
           <label for="product">Loan Product (optional)</label>
           <select id="product">
@@ -103,7 +113,13 @@
           <label for="module">LOS Module</label>
           <select id="module" disabled></select>
         </div>
+      </div>
+      <div class="grid row2">
         <div class="field">
+          <label for="members">Members (optional)</label>
+          <input id="members" type="number" min="1" step="1" placeholder="e.g. 5" />
+        </div>
+        <div class="field" style="grid-column: span 2;">
           <label for="scenario">Test Scenario</label>
           <select id="scenario" disabled></select>
         </div>
@@ -120,9 +136,11 @@
 
   <script>
     const $ = (id) => document.getElementById(id);
+    const envSel      = $('environment');
     const productSel  = $('product');
     const moduleSel   = $('module');
     const scenarioSel = $('scenario');
+    const membersIn   = $('members');
     const runBtn      = $('runBtn');
     const resetBtn    = $('resetBtn');
     const statusEl    = $('status');
@@ -150,6 +168,28 @@
         sel.appendChild(el);
       }
       sel.disabled = options.length === 0;
+    }
+
+    async function loadEnvironments() {
+      try {
+        const envs = await fetchJson('/journey/lookup/environments');
+        envSel.innerHTML = '';
+        if (envs.length === 0) {
+          const blank = document.createElement('option');
+          blank.value = '';
+          blank.textContent = '— No environments configured —';
+          envSel.appendChild(blank);
+          return;
+        }
+        for (const e of envs) {
+          const el = document.createElement('option');
+          el.value = e.code;
+          el.textContent = `${e.code} — ${e.name}`;
+          envSel.appendChild(el);
+        }
+      } catch (e) {
+        showError('Failed to load environments: ' + e.message);
+      }
     }
 
     async function loadProducts() {
@@ -220,11 +260,15 @@
     }
 
     async function runJourney() {
+      const env      = envSel.value;
       const product  = productSel.value;
       const module   = moduleSel.value;
       const scenario = scenarioSel.value;
+      const members  = membersIn.value;
       const params = new URLSearchParams({ module, scenario });
+      if (env)     params.append('env', env);
       if (product) params.append('product', product);
+      if (members && Number(members) > 0) params.append('members', members);
 
       runBtn.disabled = true;
       statusEl.textContent = 'Running…';
@@ -248,11 +292,15 @@
       const stepsHtml = (r.steps || []).map(renderStep).join('') ||
         '<div class="empty">No APIs were mapped for this combination.</div>';
 
+      const env = envSel.value || '—';
+      const members = membersIn.value || '—';
       resultPanel.innerHTML = `
         <div class="summary">
           <div><span class="label">Run ID</span>${escapeHtml(r.journeyRunId)}</div>
+          <div><span class="label">Environment</span>${escapeHtml(env)}</div>
           <div><span class="label">Product</span>${escapeHtml(r.loanProductCode || '—')}</div>
           <div><span class="label">Module</span>${escapeHtml(r.moduleCode)}</div>
+          <div><span class="label">Members</span>${escapeHtml(members)}</div>
           <div><span class="label">Scenario</span>${escapeHtml(r.scenarioCode)}</div>
           <div><span class="label">Status</span><span class="badge ${r.status}">${r.status}</span></div>
           <div><span class="label">Duration</span>${r.totalDurationMs} ms</div>
@@ -287,11 +335,13 @@
     runBtn.addEventListener('click', runJourney);
     resetBtn.addEventListener('click', () => {
       productSel.value = '';
+      membersIn.value = '';
       loadModules();
       resultPanel.style.display = 'none';
       statusEl.textContent = '';
     });
 
+    loadEnvironments();
     loadProducts().then(loadModules);
   </script>
 </body>

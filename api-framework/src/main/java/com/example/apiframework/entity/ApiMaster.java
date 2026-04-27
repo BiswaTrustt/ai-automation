@@ -59,6 +59,13 @@ public class ApiMaster {
     @Builder.Default
     private Boolean active = Boolean.TRUE;
 
+    /**
+     * Optional FK to {@code loan_product_master.id}. NULL = global/shared API
+     * visible to every product. Set = product-scoped API.
+     */
+    @Column(name = "product_id")
+    private Long productId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
